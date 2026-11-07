@@ -1,0 +1,47 @@
+#!/bin/bash
+set -euo pipefail
+exec > >(tee -a /var/log/contract-negotiations-bootstrap.log) 2>&1
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y ca-certificates curl unzip e2fsprogs
+# Keep administration available even if a later bootstrap step fails.
+if ! snap list amazon-ssm-agent >/dev/null 2>&1; then snap install amazon-ssm-agent --classic; fi
+snap start amazon-ssm-agent
+# Install AWS CLI v2 from AWS. EC2 uses its role; no access keys are embedded.
+curl -fsSL --retry 5 https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+unzip -q -o /tmp/awscliv2.zip -d /tmp/aws-cli-install
+/tmp/aws-cli-install/aws/install --update
+# The attachment is created after EC2. Match EBS ID, never guess the root disk.
+volume_serial=$(echo '${volume_id}' | tr -d '-')
+device=''
+for attempt in $(seq 1 120); do
+  device=$(lsblk -ndo PATH,SERIAL | awk -v serial="$volume_serial" '$2 == serial {print $1; exit}')
+  if [ -n "$device" ]; then break; fi
+  # Non-NVMe instance types expose the requested attachment under /dev/xvdf.
+  if [ -b /dev/xvdf ]; then device=/dev/xvdf; break; fi
+  sleep 5
+done
+if [ -z "$device" ]; then echo 'Data volume did not attach'; exit 1; fi
+if ! blkid "$device" >/dev/null 2>&1; then
+  # Only format a completely blank disk. Do not overwrite an unexpected layout.
+  if [ -n "$(wipefs -n "$device")" ] || [ "$(lsblk -nr "$device" | wc -l)" -ne 1 ]; then
+    echo 'Unrecognized data disk layout; refusing to format'; exit 1
+  fi
+  mkfs.ext4 "$device"
+fi
+if [ "$(blkid -s TYPE -o value "$device")" != ext4 ]; then echo 'Expected ext4 data volume'; exit 1; fi
+mkdir -p /srv/contract-negotiations
+uuid=$(blkid -s UUID -o value "$device")
+if ! grep -q "UUID=$uuid " /etc/fstab; then
+  echo "UUID=$uuid /srv/contract-negotiations ext4 defaults 0 2" >> /etc/fstab
+fi
+mountpoint -q /srv/contract-negotiations || mount /srv/contract-negotiations
+# Ensure Docker cannot run against an unmounted, empty directory after a reboot.
+mkdir -p /etc/systemd/system/docker.service.d
+printf '[Unit]\nRequiresMountsFor=/srv/contract-negotiations\n' > /etc/systemd/system/docker.service.d/data.conf
+systemctl daemon-reload
+mkdir -p /opt/contract-negotiations
+aws s3 cp 's3://${bucket}/${release_key}' /tmp/app.zip --region '${region}'
+echo '${release_sha}  /tmp/app.zip' | sha256sum --check -
+unzip -q -o /tmp/app.zip -d /opt/contract-negotiations
+DOMAIN='${domain}' APP_DIR=/opt/contract-negotiations bash /opt/contract-negotiations/deploy/ec2-startup.sh

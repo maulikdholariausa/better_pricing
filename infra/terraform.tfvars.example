@@ -1,0 +1,7 @@
+aws_region    = "us-west-2"
+domain        = "quotes.example.com" # Replace with your real hostname.
+instance_type = "t3.small"
+# route53_zone_id = "Z0123456789EXAMPLE" # Optional existing PUBLIC hosted zone.
+# availability_zone = "us-west-2a"
+# data_volume_gb = 30
+# ami_id = "ami-..." # Optional pinned Ubuntu 24.04 amd64 AMI.

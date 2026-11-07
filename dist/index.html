@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Compare competitive options for your home project. Upload your existing contractor quotes to Contract Negotiations.">
+  <title>Contract Negotiations — Find a better deal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header><a class="brand" href="./"><span class="brand-icon" aria-hidden="true">⌂</span><span>Contract<span class="brand-light">Negotiations</span></span></a><a class="header-link" href="#how-it-works">How it works <span aria-hidden="true">↗</span></a></header>
+  <main>
+    <section class="intro" aria-labelledby="headline">
+      <p class="eyebrow"><span></span> A better deal starts here</p>
+      <h1 id="headline">Your home project.<br>A little more<br><em>possibility.</em></h1>
+      <p class="intro-copy">Already have a contractor quote? Upload it and let us help you explore competitive offers for the same project.</p>
+      <div class="benefits"><span>✓ Free for homeowners</span><span>✓ No obligation to hire</span></div>
+      <div class="steps" id="how-it-works"><p class="eyebrow">Simple from the start</p><ol><li><span>01</span><div><strong>Share your quotes</strong><p>One project or several. Add what you have.</p></div></li><li><span>02</span><div><strong>We explore your options</strong><p>Matched contractors review your project.</p></div></li><li><span>03</span><div><strong>You choose what’s next</strong><p>Discuss the details and compare competitive quotes.</p></div></li></ol></div>
+      <p class="small-note">More options. A clearer decision. Your project, on your terms.</p>
+    </section>
+    <section class="upload-card" aria-labelledby="form-title">
+      <div id="upload-view"><p class="card-kicker">LET’S SEE WHAT’S POSSIBLE</p><h2 id="form-title">Find a better deal.</h2><p class="card-copy">Start with the quotes you already have.</p>
+        <form id="quote-form" novalidate>
+          <label class="field-label" for="quotes">Your contractor quotes</label>
+          <div class="drop-zone" id="drop-zone"><span class="upload-icon" aria-hidden="true">↥</span><strong>Drop your quotes here</strong><span>or <label for="quotes" class="browse">browse files</label></span><small>PDF, JPG or PNG · Up to 20 MB per file</small><input id="quotes" type="file" multiple accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" aria-describedby="file-help"></div>
+          <p id="file-help" class="help">Add up to 5 quotes, even for different projects.</p><ul id="file-list" aria-label="Selected quotes"></ul>
+          <label class="field-label" for="phone">Your phone number</label><input class="phone" id="phone" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" aria-describedby="phone-help"><p class="help" id="phone-help">So matched contractors can discuss your project with you.</p>
+          <label class="consent"><input id="consent" type="checkbox"><span>I authorize Contract Negotiations to review my quote(s) and share my phone number and relevant project details with matched contractors. Those contractors may contact me to ask for more details and schedule appointments for competitive quotes.</span></label>
+          <p id="error" role="alert"></p><button class="primary" type="submit">Find me a better deal <span aria-hidden="true">→</span></button>
+          <p class="under-button">No commitment. Just the opportunity to compare.</p>
+        </form>
+      </div>
+      <div id="success-view" hidden tabindex="-1"><span class="success-icon" aria-hidden="true">✓</span><p class="card-kicker">YOUR NEXT STEP</p><h2>We’ve got your quotes!</h2><p class="card-copy">We’re working on finding competitive offers that could save you money on your project.</p><div class="receipt"><strong id="receipt-count"></strong><p>Matched contractors may contact you to discuss your project, ask for more details, and schedule appointments for competitive quotes.</p></div><button class="primary" id="reset" type="button">Add another project <span aria-hidden="true">→</span></button></div>
+      <div class="card-footer"><span aria-hidden="true">◇</span> Your original pricing stays private from competing contractors.</div>
+    </section>
+  </main>
+  <footer><span>© <span id="year"></span> Contract Negotiations</span><span>Good projects deserve good options.</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
