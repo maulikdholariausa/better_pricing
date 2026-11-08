@@ -1,4 +1,4 @@
-# Contract Negotiations
+# Have a Guru
 
 A quote intake app: static frontend in dist/, Node.js API in backend/, and SQLite/private documents on persistent disk. The backend stores phone numbers, timestamped consent and file metadata. Contractor matching, redaction, notifications, accounts and admin UI are not implemented; nothing is automatically shared with contractors.
 
@@ -14,13 +14,11 @@ npm start
 
 Open http://127.0.0.1:8000. Data is created in data/ (excluded from Git). `npm run check` checks syntax. Intake accepts five PDF/JPG/PNG files up to 20 MB each; validates file signatures, phone and consent. Signature checks are not malware scanning.
 
-## Infrastructure vs application deployment
-
 ## Public content, search and analytics
 
 The Node app server-renders the sitemap's content pages from `content/pages.js`. See [SEO and measurement plan](docs/SEO-PLAN.md) for the complete link structure, page inventory, crawler settings, editorial gates and analytics funnel. `dist/` alone is not the full site.
 
-Indexing defaults off. For production, configure `SITE_URL=https://your-canonical-domain.com` and `SEO_INDEXABLE=true`; Compose derives SITE_URL from DOMAIN. Draft legal/contact and unconfirmed location pages remain noindex. Optional GA4 uses `GA_MEASUREMENT_ID` and a visitor opt-in; no external analytics is active by default. `npm start` does not load `.env` automatically.
+Local indexing defaults off. Production Compose derives SITE_URL from DOMAIN and defaults SEO_INDEXABLE to true; explicitly set SEO_INDEXABLE=false for staging. Draft legal/contact and unconfirmed location pages remain noindex. Optional GA4 uses `GA_MEASUREMENT_ID` and a visitor opt-in; no external analytics is active by default. `npm start` does not load `.env` automatically.
 
 ## Infrastructure vs application deployment
 

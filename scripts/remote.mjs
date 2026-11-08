@@ -55,7 +55,7 @@ else
 fi`;
   }
   const aws = async args => JSON.parse(await run('aws', [...args, '--region', region, '--output', 'json']));
-  const sent = await aws(['ssm', 'send-command', '--document-name', 'AWS-RunShellScript', '--instance-ids', instance, '--timeout-seconds', '600', '--parameters', JSON.stringify({ commands: [command], executionTimeout: ['1800'] }), '--comment', `Contract Negotiations ${action}`]);
+  const sent = await aws(['ssm', 'send-command', '--document-name', 'AWS-RunShellScript', '--instance-ids', instance, '--timeout-seconds', '600', '--parameters', JSON.stringify({ commands: [command], executionTimeout: ['1800'] }), '--comment', `Have a Guru ${action}`]);
   const commandId = sent.Command.CommandId;
   console.log(`SSM command ${commandId}`);
   const deadline = Date.now() + 32 * 60 * 1000;

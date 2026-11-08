@@ -6,6 +6,9 @@ services:
     init: true
     environment:
       PUBLIC_ORIGINS: https://${DOMAIN:?Set DOMAIN in .env},https://www.${DOMAIN}
+      SITE_URL: https://${DOMAIN}
+      SEO_INDEXABLE: ${SEO_INDEXABLE:-true}
+      GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
     volumes:
       - ${DATA_PATH:-/srv/contract-negotiations/data}:/data
     read_only: true

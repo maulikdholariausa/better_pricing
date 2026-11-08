@@ -4,7 +4,8 @@ const list = document.querySelector('#file-list');
 const error = document.querySelector('#error');
 const zone = document.querySelector('#drop-zone');
 let files = [];
-document.querySelector('#year').textContent = new Date().getFullYear();
+const year = document.querySelector('#year');
+if (year) year.textContent = new Date().getFullYear();
 function renderFiles() {
   list.replaceChildren();
   files.forEach((file, index) => {
@@ -19,6 +20,7 @@ function renderFiles() {
   });
 }
 function addFiles(incoming) {
+  const previousCount = files.length;
   const problems = [];
   for (const file of incoming) {
     if (files.length >= 5) { problems.push('You can add up to 5 quotes per submission.'); break; }
@@ -30,6 +32,7 @@ function addFiles(incoming) {
     if (!files.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)) files.push(file);
   }
   error.textContent = problems.join(' '); renderFiles();
+  if (files.length > previousCount) window.trackSiteEvent?.('quote_files_selected');
 }
 input.onchange = () => { addFiles(input.files); input.value = ''; };
 for (const event of ['dragenter', 'dragover']) zone.addEventListener(event, e => { e.preventDefault(); zone.classList.add('dragging'); });
@@ -46,11 +49,12 @@ form.addEventListener('submit', async e => {
   error.textContent = '';
   const submit = form.querySelector('button[type="submit"]');
   submit.disabled = true;
+  window.trackSiteEvent?.('quote_upload_started');
   submit.textContent = 'Sending your quotes…';
   const payload = new FormData();
   payload.append('phone', digits);
   payload.append('consent', 'true');
-  payload.append('consentVersion', '2026-11-06-v1');
+  payload.append('consentVersion', '2026-11-08-have-a-guru-v2');
   files.forEach(file => payload.append('quotes', file));
   let receipt;
   try {
@@ -59,12 +63,15 @@ form.addEventListener('submit', async e => {
     if (!response.ok) throw new Error(result.error || 'Unable to send your quotes. Please try again.');
     receipt = result;
   } catch (failure) {
+    window.trackSiteEvent?.('quote_upload_failed');
     error.textContent = failure.message || 'Connection failed. Please try again.';
     return;
   } finally {
     submit.disabled = false;
     submit.textContent = 'Find me a better deal →';
   }
+  window.trackSiteEvent?.('quote_uploaded');
+  window.trackSiteEvent?.('consent_recorded');
   document.querySelector('#receipt-count').textContent = `${receipt.fileCount} ${receipt.fileCount === 1 ? 'quote' : 'quotes'} received · Reference ${receipt.id}`;
   document.querySelector('#success-view h2').textContent = files.length === 1 ? 'We’ve got your quote!' : 'We’ve got your quotes!';
   document.querySelector('#upload-view').hidden = true;
