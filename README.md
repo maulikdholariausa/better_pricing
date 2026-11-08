@@ -9,10 +9,10 @@ Install Node.js 24 or newer:
 ```sh
 npm ci
 npm test
-npm start
+npm run dev
 ```
 
-Open http://127.0.0.1:8000. Data is created in data/ (excluded from Git). `npm run check` checks syntax. Intake accepts five PDF/JPG/PNG files up to 20 MB each; validates file signatures, phone and consent. Signature checks are not malware scanning.
+Open http://127.0.0.1:8000. Development mode restarts the server and refreshes open pages when backend, content, HTML, CSS or JavaScript files change. Stop any existing npm start process first. Use npm start for the normal server without watchers or browser reload. Data is created in data/ (excluded from Git). `npm run check` checks syntax. Intake accepts five PDF/JPG/PNG files up to 20 MB each; validates file signatures, phone and consent. Signature checks are not malware scanning.
 
 ## Public content, search and analytics
 
@@ -34,3 +34,5 @@ Use `AWS_PROFILE=better-pricing` in your terminal. Run Terraform separately only
 The default remote deployment target is the instance/region in the local Terraform outputs. No AWS credentials, personal GitHub tokens, SQLite files, upload documents, Terraform state or local tfvars belong in Git. The private GitHub deploy key remains on EC2's encrypted data disk.
 
 Single-instance restarts cause brief downtime. Automatic app rollback preserves the previous code but does not undo DB migrations. Off-instance backup scheduling, malware scanning, disk alerts, multi-instance availability and CI/CD automation are not yet configured.
+
+Content sections use descriptive heading anchors (for example, #get-written-clarifications). Old #section-N targets remain available for existing links. These anchors stay on the same article; they do not create duplicate pages.

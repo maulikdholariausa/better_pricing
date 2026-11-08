@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import { installSite, publicPages } from '../backend/site.js';
+import { installSite, publicPages, sectionAnchors } from '../backend/site.js';
 
 test('public pages are rendered, linked and described; drafts stay outside the sitemap', async () => {
   const previous = { SITE_URL: process.env.SITE_URL, SEO_INDEXABLE: process.env.SEO_INDEXABLE };
@@ -19,6 +19,13 @@ test('public pages are rendered, linked and described; drafts stay outside the s
       const response = await fetch(base + page.path);
       assert.equal(response.status, 200, page.path);
       const html = await response.text();
+      if (page.sections) {
+        sectionAnchors(page.sections).forEach((id, i) => {
+          assert.ok(html.includes('href="#' + id + '"'), page.path + ': descriptive section link');
+          assert.ok(html.includes('id="' + id + '"'), page.path + ': matching section target');
+          assert.ok(html.includes('id="section-' + (i + 1) + '"'), page.path + ': legacy section target');
+        });
+      }
       assert.equal((html.match(/<h1\b/g) || []).length, 1, page.path);
       assert.ok(html.includes(`rel="canonical" href="https://test-domain.com${page.path}"`), page.path);
       assert.match(html, /<meta name="description" content="[^"]+">/);

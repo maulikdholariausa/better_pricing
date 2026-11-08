@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check backend/app.js && node --check dist/app.js && node --check scripts/remote.mjs && bash -n infra/scripts/deploy-app.sh && node --check backend/site.js && node --check content/pages.js && node --check dist/analytics.js",
+    "check": "node --check server.js && node --check backend/app.js && node --check dist/app.js && node --check scripts/remote.mjs && bash -n infra/scripts/deploy-app.sh && node --check backend/site.js && node --check content/pages.js && node --check dist/analytics.js && node --check backend/dev.js && node --check scripts/dev.mjs",
     "test": "node --test",
     "deploy": "node scripts/remote.mjs deploy",
     "server:key": "node scripts/remote.mjs key",
     "server:status": "node scripts/remote.mjs status",
-    "server:backup": "node scripts/remote.mjs backup"
+    "server:backup": "node scripts/remote.mjs backup",
+    "dev": "node scripts/dev.mjs"
   },
   "engines": {
     "node": ">=24"
