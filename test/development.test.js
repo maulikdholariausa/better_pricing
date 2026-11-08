@@ -13,6 +13,12 @@ test('section slugs handle accents, repeated headings and legacy ID collisions',
   assert.deepEqual(sectionAnchors([['Get written clarifications'], ['Get written clarifications'], ['Section 1'], ['Café & costs'], ['???']]), ['get-written-clarifications', 'get-written-clarifications-2', 'section-1-2', 'cafe-costs', 'topic']);
 });
 
+test('section anchors remove list numbers while preserving meaningful numbers', () => {
+  const sections = [['3. Ask for an independent estimate'], ['2) Check the scope'], ['1. Check the scope'], ['24-hour scheduling']];
+  assert.deepEqual(sectionAnchors(sections), ['ask-for-an-independent-estimate', 'check-the-scope', 'check-the-scope-2', '24-hour-scheduling']);
+  assert.equal(sectionAnchors(sections, false)[0], '3-ask-for-an-independent-estimate');
+});
+
 test('development reload injects HTML only and provides uncached startup version', async () => {
   const app = express(); installDevReload(app);
   app.get('/', (_req, res) => res.type('html').send('<!doctype html><body>Hello</body>'));
