@@ -3,14 +3,10 @@ set -euo pipefail
 exec > >(tee -a /var/log/contract-negotiations-bootstrap.log) 2>&1
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y ca-certificates curl unzip e2fsprogs
+apt-get install -y ca-certificates curl git jq openssh-client e2fsprogs
 # Keep administration available even if a later bootstrap step fails.
 if ! snap list amazon-ssm-agent >/dev/null 2>&1; then snap install amazon-ssm-agent --classic; fi
 snap start amazon-ssm-agent
-# Install AWS CLI v2 from AWS. EC2 uses its role; no access keys are embedded.
-curl -fsSL --retry 5 https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
-unzip -q -o /tmp/awscliv2.zip -d /tmp/aws-cli-install
-/tmp/aws-cli-install/aws/install --update
 # The attachment is created after EC2. Match EBS ID, never guess the root disk.
 volume_serial=$(echo '${volume_id}' | tr -d '-')
 device=''
@@ -40,8 +36,35 @@ mountpoint -q /srv/contract-negotiations || mount /srv/contract-negotiations
 mkdir -p /etc/systemd/system/docker.service.d
 printf '[Unit]\nRequiresMountsFor=/srv/contract-negotiations\n' > /etc/systemd/system/docker.service.d/data.conf
 systemctl daemon-reload
-mkdir -p /opt/contract-negotiations
-aws s3 cp 's3://${bucket}/${release_key}' /tmp/app.zip --region '${region}'
-echo '${release_sha}  /tmp/app.zip' | sha256sum --check -
-unzip -q -o /tmp/app.zip -d /opt/contract-negotiations
-DOMAIN='${domain}' APP_DIR=/opt/contract-negotiations bash /opt/contract-negotiations/deploy/ec2-startup.sh
+# Infrastructure setup only: application source is fetched by an explicit deployment.
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL --retry 5 https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+source /etc/os-release
+arch=$(dpkg --print-architecture)
+echo "deb [arch=$arch signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $VERSION_CODENAME stable" > /etc/apt/sources.list.d/docker.list
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+install -d -m 0700 -o 1000 -g 1000 /srv/contract-negotiations/data
+install -d -m 0700 /srv/contract-negotiations/git /srv/contract-negotiations/releases /srv/contract-negotiations/backups
+install -d -m 0700 /srv/contract-negotiations/caddy-data /srv/contract-negotiations/caddy-config
+if [ ! -f /srv/contract-negotiations/git/id_ed25519 ]; then
+  ssh-keygen -q -t ed25519 -N '' -C '${repository} EC2 read-only deployment' -f /srv/contract-negotiations/git/id_ed25519
+fi
+# GitHub publishes SSH host keys over authenticated HTTPS; do not trust ssh-keyscan alone.
+curl -fsSL --retry 5 https://api.github.com/meta | jq -er '.ssh_keys[] | "[ssh.github.com]:443 " + .' > /srv/contract-negotiations/git/known_hosts
+chmod 600 /srv/contract-negotiations/git/known_hosts
+cat > /etc/contract-negotiations.env <<'CONFIG'
+DOMAIN='${domain}'
+GITHUB_REPOSITORY='${repository}'
+CONFIG
+chmod 600 /etc/contract-negotiations.env
+echo '${deploy_script}' | base64 --decode > /usr/local/sbin/deploy-contract-negotiations
+chmod 700 /usr/local/sbin/deploy-contract-negotiations
+# Rebuild the last successful release on a replacement instance. First launch waits for deployment.
+if [ -f /srv/contract-negotiations/active-release ]; then
+  /usr/local/sbin/deploy-contract-negotiations --restore
+fi
+touch /var/lib/contract-negotiations-ready
+echo 'Infrastructure ready. Add the public deploy key to GitHub, then deploy a commit.'

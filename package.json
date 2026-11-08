@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check backend/app.js && node --check dist/app.js",
-    "test": "node --test"
+    "check": "node --check server.js && node --check backend/app.js && node --check dist/app.js && node --check scripts/remote.mjs && bash -n infra/scripts/deploy-app.sh",
+    "test": "node --test",
+    "deploy": "node scripts/remote.mjs deploy",
+    "server:key": "node scripts/remote.mjs key",
+    "server:status": "node scripts/remote.mjs status",
+    "server:backup": "node scripts/remote.mjs backup"
   },
   "engines": {
     "node": ">=24"

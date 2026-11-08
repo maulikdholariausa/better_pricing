@@ -4,3 +4,6 @@ data
 .env
 *.tar.gz
 backups
+infra
+test
+scripts

@@ -47,3 +47,12 @@ variable "ami_id" {
   type        = string
   default     = null
 }
+variable "github_repository" {
+  description = "GitHub owner/repository. EC2 receives a repository-scoped read-only deploy key."
+  type        = string
+  default     = "maulikdholariausa/better_pricing"
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
+    error_message = "Use owner/repository, without a URL or credentials."
+  }
+}

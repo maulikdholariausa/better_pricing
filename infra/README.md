@@ -1,87 +1,114 @@
-# Terraform deployment
+# Infrastructure and Git deployments
 
-This creates a new VPC and public subnet, Ubuntu 24.04 amd64 EC2 instance (`t3.small` by default), Elastic IP, encrypted 20 GiB root disk, separate encrypted 30 GiB gp3 data disk, web-only security group, SSM instance role, and a private encrypted S3 bucket containing the app bundle. SQLite and customer uploads remain on EC2, under `/srv/contract-negotiations` on the separate disk. No NAT gateway, RDS, or load balancer is needed for this single-instance setup.
+Terraform manages the VPC, public subnet, EC2, Elastic IP, web security group, SSM role and separate encrypted EBS disk. It does not bundle application files or deploy code. Default instance: Ubuntu 24.04 amd64, t3.small. Only inbound TCP 80/443 is open; administration and deployments use SSM.
 
-## Before running
+## AWS access and configuration
 
-Install [Terraform](https://developer.hashicorp.com/terraform/install), [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), and (for terminal sessions) the [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html). AWS Console Session Manager also works without the terminal plugin.
-
-Authenticate to your AWS account locally, preferably through IAM Identity Center:
+Install Terraform >=1.7 and AWS CLI v2. Authenticate with a local profile (do not put keys in this repository), then:
 
 ```sh
-aws configure sso --profile better-pricing
-aws sso login --profile better-pricing
 export AWS_PROFILE=better-pricing
 aws sts get-caller-identity
-```
-
-Your deployment identity needs permissions to manage VPC/networking, EC2, EBS, Elastic IPs, IAM roles and instance profiles, S3 releases, and to read the Canonical public AMI SSM parameter. Optional DNS automation also needs access to the selected Route 53 zone. It must be allowed to pass the EC2 role. Do not put access keys in tfvars, source files, or chat.
-
-## Configure and preview
-
-From your project folder:
-
-```sh
 cd infra
-cp terraform.tfvars.example terraform.tfvars
-```
-
-Edit `terraform.tfvars`: set your real `domain`, desired `aws_region`, and optionally an existing public `route53_zone_id`. Without a zone ID, Terraform prints an IP for you to use in an A record at your DNS provider. This does not register or purchase a domain. Remove conflicting AAAA records unless you configure IPv6 separately.
-
-```sh
+# For a new checkout only: copy terraform.tfvars.example to terraform.tfvars, then edit it.
 terraform init
-terraform fmt -check
 terraform validate
 terraform test
 terraform plan -out=deployment.tfplan
 ```
 
-Review the plan. When ready to incur AWS charges and deploy:
+The existing local tfvars uses us-east-2, haveaguru.com, t3.small and a 20 GiB data disk. The checked-in example is generic. Keep your current account, region and AZ for migration. An Organizations SCP previously blocked us-west-2.
+
+Review the plan before applying. EC2, EBS and public IPv4 are billable. Source edits under dist/ or backend/ no longer change the infrastructure plan. Bootstrap/deployment-tooling edits in infra/ can still replace the instance. A new regional Ubuntu AMI can also cause replacement; pin ami_id if you want to control OS upgrades.
+
+## Migration from the bundled Terraform deployment
+
+1. Commit and push the migration code to GitHub main. The remote deployment checks out only a commit reachable from main.
+2. Before replacing the old server, back up its data:
+
+```sh
+# From the project root. Old Terraform state lacks the region output, so set it explicitly.
+AWS_REGION=us-east-2 npm run server:backup
+```
+
+Copy the resulting archive off the instance or take an EBS snapshot of the data volume. The local backup alone does not protect against volume loss. For an application-consistent snapshot, stop the app before requesting the snapshot, then start it once AWS has initiated the snapshot. Wait for the snapshot to complete before migration.
+
+3. Generate/show the GitHub public deploy key before replacement:
+
+```sh
+AWS_REGION=us-east-2 npm run server:key
+```
+
+Add the printed ssh-ed25519 PUBLIC key at GitHub repository Settings > Deploy keys > Add deploy key. Leave **Allow write access unchecked**. The private key stays on the encrypted data disk. Do not use a personal access token on EC2.
+
+4. Run terraform init, validate, test and a fresh plan from infra/. Expected changes: one EC2 replacement, data-volume and Elastic-IP reattachment, deletion of the old application S3 object/bucket and S3 read policy, plus new outputs. The data EBS volume, Elastic IP, VPC and security group must remain. Stop if the plan replaces the data disk or changes region/AZ unexpectedly. Do not run terraform destroy.
+5. Apply the reviewed plan. The old site goes offline until the first Git deployment:
 
 ```sh
 terraform apply deployment.tfplan
-terraform output
 ```
 
-EC2, EBS, public IPv4 and S3 incur charges; no free-tier eligibility is assumed. No resources are created by `init`, `validate`, or `plan`. Applying creates IAM access and publicly exposes only ports 80 and 443. No SSH key or inbound SSH is configured.
-
-Terraform packages only explicitly selected app/deploy files, excluding `data`, `node_modules`, credentials and Terraform state. The instance downloads the private release using its role, verifies its SHA256, mounts the data disk, installs Docker, and starts the app. Bootstrap may take several minutes after `apply` finishes. HTTPS requires DNS to point to the printed IP.
-
-## Verify and administer
+6. Wait for bootstrap to finish, then deploy the pushed commit from the project root:
 
 ```sh
-terraform output -raw ssm_command
-# Run the printed command, or connect from EC2 Console > Connect > Session Manager.
+npm run deploy
+npm run server:status
 ```
 
-In the instance session:
+Terraform apply finishing does not mean cloud-init is finished. If the command reports the readiness marker is missing, inspect `/var/log/contract-negotiations-bootstrap.log` through Session Manager and retry after setup completes.
+
+The Elastic IP and data disk are retained. Existing SQLite and uploads stay in `/srv/contract-negotiations/data`. Old Docker certificate volumes were on the root disk; certificates may need to be reissued during this first migration. Subsequent certificates are stored on EBS and survive instance replacement.
+
+## New environment
+
+Apply the reviewed Terraform plan. It installs Docker/Git, mounts the data disk, creates the repository deploy key and installs `/usr/local/sbin/deploy-contract-negotiations`. It deliberately waits for an explicit application deployment. Set DNS, run npm run server:key, add the read-only GitHub key, then run npm run deploy.
+
+## Routine app updates — no Terraform apply
+
+```sh
+# From the project root
+npm test
+npm run check
+git add <changed-files>
+git commit -m "Describe your change"
+git push origin main
+npm run deploy
+```
+
+By default deployment uses local HEAD. Local changes must be committed/stashed and the commit pushed to main. To deploy a prior pushed commit (code rollback):
+
+```sh
+npm run deploy -- FULL_40_CHARACTER_COMMIT_SHA
+```
+
+The script fetches main into a private bare Git repo, verifies commit ancestry, extracts into an immutable release directory, builds a SHA-tagged Docker image, stops writes for a consistent data backup, starts the app/proxy and checks container/API health and the public HTTPS route. Failed builds leave the old app running; failures during switching attempt to restart the previous release. Code rollback does not reverse DB schema/data changes. First-deployment failures have no previous app to restore. Restarts cause brief downtime; this is not a zero-downtime deployment.
+
+SSM commands require ssm:SendCommand for AWS-RunShellScript and the target EC2 instance, and ssm:GetCommandInvocation to poll status. Deployment callers effectively have root control of that instance, so restrict those permissions to trusted operators. GitHub access is only read access to this repository. `npm run server:status` shows deployed commit and timestamps. Commands use Terraform outputs to select the instance and region; run on the checkout with its current Terraform state. If Terraform is not on PATH, set TERRAFORM_BIN to its executable path. AWS_PROFILE is honored.
+
+## Persistence and recovery
+
+Everything under `/srv/contract-negotiations` is on the protected encrypted disk: `data/` (SQLite and uploads), `git/` (read-only deploy credentials and Git objects), `releases/`, `backups/`, `active-release`, `deployments.log`, `caddy-data/` and `caddy-config/`. No HTTP route exposes these directories.
+
+On a future instance replacement, bootstrap rebuilds and starts the last successful release from this disk. It does not silently deploy the newest main. To install newer code, run npm run deploy explicitly.
+
+The data volume has prevent_destroy=true. Do not remove that protection without a verified backup and a retention/deletion plan. Keep the volume in the same AZ. Resizing EBS requires expanding its ext4 filesystem. Automated off-instance backups, snapshot schedules, retention and disk alerts are not configured. Release directories, images and backups currently accumulate; monitor storage and retain the previous release for rollback when cleaning up.
+
+Terraform state stays local and is excluded from Git. Back it up securely; use an encrypted remote backend with locking before multiple operators/CI manage infrastructure. Commit .terraform.lock.hcl. Do not remove the old archive provider from the lock file until Terraform has migrated state successfully; init will manage requirements.
+
+## DNS and verification
+
+Squarespace: A record `@` -> terraform output public_ip; CNAME `www` -> haveaguru.com. Preserve mail records. Optional route53_zone_id manages these records in an existing public Route 53 zone instead. Caddy obtains/renews HTTPS for both hostnames after DNS resolves and the proxy is running.
+
+```sh
+curl --fail https://haveaguru.com/api/health
+curl --fail https://www.haveaguru.com/api/health
+```
+
+Use EC2 Console > Connect > Session Manager, or the command from terraform output ssm_command. Diagnostics:
 
 ```sh
 sudo tail -n 100 /var/log/contract-negotiations-bootstrap.log
-sudo tail -n 100 /var/log/cloud-init-output.log
-cd /opt/contract-negotiations
-sudo docker compose ps
-sudo docker compose logs --tail=100
+sudo cat /srv/contract-negotiations/active-release
+sudo cat /srv/contract-negotiations/deployments.log
+sudo docker ps
 ```
-
-Once DNS resolves, check `https://YOUR_DOMAIN/api/health`, then submit a test quote in the browser. `terraform apply` confirms provisioning, not application readiness or successful certificate issuance.
-
-If initial bootstrap fails, use Session Manager to inspect its log. Fix the underlying network or package issue, then `sudo cloud-init single --name scripts-user --frequency always` reruns user data. The script preserves an existing ext4 data filesystem and refuses unknown layouts.
-
-## Updates and data safety
-
-This intentionally uses an immutable EC2 deployment: changed application source, bootstrap, domain, or resolved AMI changes user data/instance configuration and can replace EC2 at the next apply. Review every plan. Replacement causes downtime; the Elastic IP and separate data disk reattach. Do not enable `create_before_destroy` on this instance: only one instance can use this disk at a time. You can pin `ami_id` to avoid automatic replacement when Canonical publishes a new image.
-
-After editing the app, repeat `terraform plan -out=deployment.tfplan` and review before `terraform apply deployment.tfplan`. Recreate saved plans after any source changes; they refer to the generated local `.build/app.zip`. Plan and apply on the same checkout with the same bundle. Do not modify source between them.
-
-The data disk has `prevent_destroy = true`; Terraform refuses a full destroy or an AZ change requiring its replacement. This is intentional. Take a verified backup before any teardown and explicitly plan retention or deletion; do not casually remove that protection. Root disk and Docker certificate volumes are replaced with EC2; customer DB/files are on the separate disk. Increased EBS size requires filesystem expansion (`sudo resize2fs DEVICE`) after identifying the mounted data device with `findmnt /srv/contract-negotiations`; shrinking is unsupported.
-
-Run `sudo bash deploy/backup.sh` from `/opt/contract-negotiations` before updates and copy backups off-instance. Daily off-instance backups/snapshots and disk alerts are not yet automated. A single instance and local SQLite remain a single point of failure.
-
-Terraform initially uses local state. Keep `terraform.tfstate` secure and backed up; it is excluded from Git. Commit `.terraform.lock.hcl` so collaborators use the same provider versions. Move state to an encrypted, access-controlled remote backend with locking before multiple people or CI manage this deployment. The release bucket is for application code, not Terraform state or customer backups.
-
-## Root domain and www
-
-The proxy serves both the configured domain and `www.` plus that domain, with automatic HTTPS for each. With Squarespace DNS, keep the root A record pointing to `terraform output -raw public_ip` and add a CNAME with host `www` and data `haveaguru.com` (substitute your configured domain). Replace any conflicting `www` website record. With `route53_zone_id` configured, Terraform creates both records instead. The API accepts same-origin submissions from both addresses.
-
-The first app deployment happens during EC2 user-data execution after `terraform apply`. Bootstrap logs show the source download and Docker launch; `sudo docker inspect --format '{{.State.StartedAt}}' "$(sudo docker compose ps -q app)"` from the app directory shows the current app container start time, which may be later than initial deployment after a restart.

@@ -1,5 +1,6 @@
 services:
   app:
+    image: ${APP_IMAGE:-contract-negotiations:local}
     build: .
     restart: unless-stopped
     init: true
@@ -27,13 +28,10 @@ services:
       DOMAIN: ${DOMAIN}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - ${PERSIST_PATH:-/srv/contract-negotiations}/caddy-data:/data
+      - ${PERSIST_PATH:-/srv/contract-negotiations}/caddy-config:/config
     depends_on:
       app:
         condition: service_healthy
     logging:
       options: {max-size: 10m, max-file: '3'}
-volumes:
-  caddy_data:
-  caddy_config:

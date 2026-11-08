@@ -13,7 +13,8 @@ mock_provider "aws" {
 run "single_instance_plan" {
   command = plan
   variables {
-    domain = "quotes.example.com"
+    domain         = "quotes.example.com"
+    data_volume_gb = 30
   }
   assert {
     condition     = aws_ebs_volume.data.encrypted && aws_ebs_volume.data.size == 30
@@ -28,7 +29,7 @@ run "single_instance_plan" {
     error_message = "Only HTTP and HTTPS should be publicly exposed."
   }
   assert {
-    condition     = aws_s3_bucket_public_access_block.releases.block_public_policy && aws_s3_bucket_public_access_block.releases.restrict_public_buckets
-    error_message = "Application releases must remain private."
+    condition     = !strcontains(file("${path.module}/main.tf"), "archive_file")
+    error_message = "Application content must not be bundled into Terraform or EC2 user data."
   }
 }

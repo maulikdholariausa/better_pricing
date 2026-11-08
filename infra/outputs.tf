@@ -14,3 +14,9 @@ output "ssm_command" {
 output "data_volume_id" {
   value = aws_ebs_volume.data.id
 }
+output "aws_region" {
+  value = var.aws_region
+}
+output "github_repository" {
+  value = var.github_repository
+}
