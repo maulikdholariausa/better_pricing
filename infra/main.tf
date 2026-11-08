@@ -121,9 +121,10 @@ resource "aws_instance" "app" {
   }
 }
 resource "aws_volume_attachment" "data" {
-  device_name = "/dev/sdf"
-  volume_id   = aws_ebs_volume.data.id
-  instance_id = aws_instance.app.id
+  device_name                    = "/dev/sdf"
+  volume_id                      = aws_ebs_volume.data.id
+  instance_id                    = aws_instance.app.id
+  stop_instance_before_detaching = true
 }
 resource "aws_eip" "app" {
   domain = "vpc"

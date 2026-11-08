@@ -25,6 +25,10 @@ run "single_instance_plan" {
     error_message = "EC2 must require IMDSv2."
   }
   assert {
+    condition     = aws_volume_attachment.data.stop_instance_before_detaching
+    error_message = "Stop EC2 cleanly before detaching the database disk on future replacements."
+  }
+  assert {
     condition     = toset([for rule in aws_security_group.app.ingress : rule.from_port]) == toset([80, 443])
     error_message = "Only HTTP and HTTPS should be publicly exposed."
   }
