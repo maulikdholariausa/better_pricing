@@ -54,7 +54,7 @@ form.addEventListener('submit', async e => {
   const payload = new FormData();
   payload.append('phone', digits);
   payload.append('consent', 'true');
-  payload.append('consentVersion', '2026-11-08-have-a-guru-v2');
+  payload.append('consentVersion', '2026-11-10-have-a-guru-v3');
   files.forEach(file => payload.append('quotes', file));
   let receipt;
   try {

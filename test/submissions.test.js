@@ -4,7 +4,7 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { createApp, CONSENT_VERSION } from '../backend/app.js';
+import { createApp, CONSENT_VERSION, CONSENT_TEXT } from '../backend/app.js';
 
 test('quotes persist privately; invalid consent, files and phone are rejected without leftovers', async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'quotes-test-'));
@@ -24,6 +24,7 @@ test('quotes persist privately; invalid consent, files and phone are rejected wi
     assert.equal((await send({ phone: '123' })).status, 400);
     assert.equal((await send({}, 'fake pdf')).status, 400);
     assert.equal((await send({ consentVersion: 'old' })).status, 400);
+    assert.equal((await send({ consentVersion: '2026-11-08-have-a-guru-v2' })).status, 400);
     assert.deepEqual(await readdir(path.join(dataDir, 'uploads')), []);
     const response = await send();
     assert.equal(response.status, 201);
@@ -33,6 +34,8 @@ test('quotes persist privately; invalid consent, files and phone are rejected wi
     const saved = db.prepare('SELECT * FROM submissions WHERE id = ?').get(receipt.id);
     assert.equal(saved.phone, '+14155551234');
     assert.equal(saved.consent_version, CONSENT_VERSION);
+    assert.equal(saved.consent_text, CONSENT_TEXT);
+    assert.match(saved.consent_text, /original quoted pricing/);
     const file = db.prepare('SELECT * FROM files').get();
     assert.equal((await fetch(base + '/uploads/' + file.stored_name)).status, 404);
     assert.equal((await readdir(path.join(dataDir, 'uploads'))).length, 1);

@@ -8,8 +8,8 @@ import path from 'node:path';
 import { installSite } from './site.js';
 import { installDevReload } from './dev.js';
 
-export const CONSENT_VERSION = '2026-11-08-have-a-guru-v2';
-export const CONSENT_TEXT = 'I authorize Have a Guru to review my quote(s) and share my phone number and relevant project details with matched contractors. Those contractors may contact me to ask for more details and schedule appointments for competitive quotes.';
+export const CONSENT_VERSION = '2026-11-10-have-a-guru-v3';
+export const CONSENT_TEXT = 'I authorize Have a Guru to review my quote(s) and share my phone number, original quoted pricing and relevant project details with matched contractors. Those contractors may contact me to ask for more details and schedule appointments for competitive quotes.';
 export async function createApp({ dataDir = process.env.DATA_DIR || './data', production = process.env.NODE_ENV === 'production' } = {}) {
   const uploads = path.resolve(dataDir, 'uploads');
   await mkdir(uploads, { recursive: true, mode: 0o700 });
