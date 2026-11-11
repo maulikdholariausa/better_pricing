@@ -48,11 +48,12 @@ resource "aws_security_group" "app" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "HTTPS"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    cidr_blocks     = var.restrict_origin_to_cloudfront ? [] : ["0.0.0.0/0"]
+    prefix_list_ids = var.restrict_origin_to_cloudfront ? [data.aws_ec2_managed_prefix_list.cloudfront.id] : []
   }
   egress {
     description = "Package downloads, SSM, S3 and certificate renewal"
@@ -95,15 +96,17 @@ resource "aws_instance" "app" {
   iam_instance_profile        = aws_iam_instance_profile.app.name
   user_data_replace_on_change = true
   user_data = templatefile("${path.module}/user-data.sh.tftpl", {
-    domain        = var.domain
-    repository    = var.github_repository
-    volume_id     = aws_ebs_volume.data.id
-    deploy_script = filebase64("${path.module}/scripts/deploy-app.sh")
+    runtime_parameter = "/${var.project_name}/runtime"
+    aws_region        = var.aws_region
+    domain            = var.domain
+    repository        = var.github_repository
+    volume_id         = aws_ebs_volume.data.id
+    deploy_script     = filebase64("${path.module}/scripts/deploy-app.sh")
   })
   metadata_options {
     http_tokens                 = "required"
     http_endpoint               = "enabled"
-    http_put_response_hop_limit = 1
+    http_put_response_hop_limit = 2
   }
   root_block_device {
     volume_size           = 20
@@ -112,8 +115,12 @@ resource "aws_instance" "app" {
     delete_on_termination = true
   }
   tags       = { Name = var.project_name }
-  depends_on = [aws_route_table_association.app, aws_iam_role_policy_attachment.ssm]
+  depends_on = [aws_route_table_association.app, aws_iam_role_policy_attachment.ssm, aws_iam_role_policy.quotes]
   lifecycle {
+    precondition {
+      condition     = !var.restrict_origin_to_cloudfront || var.enable_cloudfront
+      error_message = "Enable and test CloudFront before restricting direct origin access."
+    }
     precondition {
       condition     = contains(data.aws_ec2_instance_type.app.supported_architectures, "x86_64")
       error_message = "Choose an x86_64 instance type; this configuration uses an amd64 Ubuntu AMI."
@@ -138,8 +145,16 @@ resource "aws_route53_record" "app" {
   zone_id = var.route53_zone_id
   name    = var.domain
   type    = "A"
-  ttl     = 300
-  records = [aws_eip.app.public_ip]
+  ttl     = var.enable_cloudfront ? null : 300
+  records = var.enable_cloudfront ? null : [aws_eip.app.public_ip]
+  dynamic "alias" {
+    for_each = var.enable_cloudfront ? [1] : []
+    content {
+      name                   = aws_cloudfront_distribution.app[0].domain_name
+      zone_id                = aws_cloudfront_distribution.app[0].hosted_zone_id
+      evaluate_target_health = false
+    }
+  }
 }
 resource "aws_route53_record" "www" {
   count   = var.route53_zone_id == null ? 0 : 1

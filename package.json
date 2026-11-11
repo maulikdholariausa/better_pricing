@@ -5,20 +5,27 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check backend/app.js && node --check dist/app.js && node --check scripts/remote.mjs && bash -n infra/scripts/deploy-app.sh && node --check backend/site.js && node --check content/pages.js && node --check dist/analytics.js && node --check backend/dev.js && node --check scripts/dev.mjs",
+    "check": "node --check server.js && node --check backend/app.js && node --check backend/quote-routes.js && node --check backend/quote-services.js && node --check backend/quote-store.js && node --check infra/scripts/configure-notify.mjs && node --check dist/app.js && node --check scripts/remote.mjs && bash -n infra/scripts/deploy-app.sh && node --check backend/site.js && node --check content/pages.js && node --check dist/analytics.js && node --check backend/dev.js && node --check scripts/dev.mjs && node --check backend/environment.js && node --check backend/upload-quote.js",
     "test": "node --test",
     "deploy": "node scripts/remote.mjs deploy",
     "server:key": "node scripts/remote.mjs key",
     "server:status": "node scripts/remote.mjs status",
     "server:backup": "node scripts/remote.mjs backup",
-    "dev": "node scripts/dev.mjs"
+    "dev": "node scripts/dev.mjs",
+    "start:dev": "node server.js dev",
+    "staging": "node server.js staging",
+    "start:staging": "node server.js staging",
+    "prod": "node server.js prod",
+    "start:prod": "node server.js prod"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
+    "@aws-sdk/client-endusermessaging": "^3.1166.0",
+    "@aws-sdk/client-s3": "^3.1166.0",
     "express": "^5.1.0",
-    "express-rate-limit": "^8.1.0",
+    "libphonenumber-js": "^1.13.16",
     "multer": "^2.0.2"
   }
 }

@@ -1,11 +1,23 @@
 www.{$DOMAIN} {
-    redir https://{$DOMAIN}{uri} permanent
+  redir https://{$DOMAIN}{uri} permanent
 }
-
 {$DOMAIN} {
+  request_body {
+    max_size 101MB
+  }
+  reverse_proxy app:8000
+  header Strict-Transport-Security "max-age=31536000"
+}
+{$ORIGIN_HOST:origin.localhost} {
+  @authorized header X-Guru-Origin {$ORIGIN_SECRET:unconfigured}
+  handle @authorized {
     request_body {
-        max_size 101MB
+      max_size 101MB
     }
     reverse_proxy app:8000
-    header Strict-Transport-Security "max-age=31536000"
+  }
+  handle {
+    respond "Forbidden" 403
+  }
+  header Strict-Transport-Security "max-age=31536000"
 }

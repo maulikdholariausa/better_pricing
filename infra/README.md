@@ -1,5 +1,7 @@
 # Infrastructure and Git deployments
 
+For the new S3 upload, AWS SMS verification and CloudFront/WAF rollout, follow [the staged quote-upload guide](../docs/QUOTE-UPLOAD.md) before applying changes. It includes the required Squarespace DNS steps and explains the EC2 replacement.
+
 Terraform manages the VPC, public subnet, EC2, Elastic IP, web security group, SSM role and separate encrypted EBS disk. It does not bundle application files or deploy code. Default instance: Ubuntu 24.04 amd64, t3.small. Only inbound TCP 80/443 is open; administration and deployments use SSM.
 
 ## AWS access and configuration

@@ -67,6 +67,10 @@ fi`;
     if (['Pending', 'InProgress', 'Delayed'].includes(result.Status)) continue;
     if (result.StandardOutputContent) console.log(result.StandardOutputContent);
     if (result.StandardErrorContent) console.error(result.StandardErrorContent);
+    if (result.Status === 'Success' && action === 'deploy' && outputs.cloudfront_distribution_id?.value) {
+      const invalidation = await aws(['cloudfront', 'create-invalidation', '--distribution-id', outputs.cloudfront_distribution_id.value, '--paths', '/*']);
+      console.log(`Public cache invalidation ${invalidation.Invalidation.Id} requested.`);
+    }
     if (result.Status !== 'Success') throw new Error(`Remote command ${result.Status}. Inspect command ${commandId} in Systems Manager Run Command.`);
     return;
   }

@@ -5,10 +5,19 @@ services:
     restart: unless-stopped
     init: true
     environment:
+      APP_ENV: ${APP_ENV:-prod}
+      QUOTES_PREFIX: ${QUOTES_PREFIX:-quotes-prod}
       PUBLIC_ORIGINS: https://${DOMAIN:?Set DOMAIN in .env},https://www.${DOMAIN}
       SITE_URL: https://${DOMAIN}
       SEO_INDEXABLE: ${SEO_INDEXABLE:-true}
       GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
+      AWS_REGION: ${AWS_REGION:-us-east-2}
+      QUOTES_BUCKET: ${QUOTES_BUCKET:-haveaguru-quotes-prod}
+      NOTIFY_CONFIGURATION_ID: ${NOTIFY_CONFIGURATION_ID:-}
+      NOTIFY_CODE_CONFIGURATION_ID: ${NOTIFY_CODE_CONFIGURATION_ID:-}
+      SMS_MONTHLY_SEND_LIMIT: ${SMS_MONTHLY_SEND_LIMIT:-400}
+      ORIGIN_SECRET: ${ORIGIN_SECRET:-}
+      REQUIRE_CLOUDFRONT: ${REQUIRE_CLOUDFRONT:-false}
     volumes:
       - ${DATA_PATH:-/srv/contract-negotiations/data}:/data
     read_only: true
@@ -29,6 +38,8 @@ services:
     ports: ['80:80', '443:443']
     environment:
       DOMAIN: ${DOMAIN}
+      ORIGIN_HOST: ${ORIGIN_HOST:-origin.${DOMAIN}}
+      ORIGIN_SECRET: ${ORIGIN_SECRET:-}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${PERSIST_PATH:-/srv/contract-negotiations}/caddy-data:/data

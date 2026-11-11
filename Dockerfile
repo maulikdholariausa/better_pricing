@@ -4,6 +4,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --chown=node:node server.js ./
 COPY --chown=node:node backend ./backend
+COPY --chown=node:node config ./config
 COPY --chown=node:node content ./content
 COPY --chown=node:node dist ./dist
 USER node

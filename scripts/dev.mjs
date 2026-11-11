@@ -9,7 +9,7 @@ let pending = false;
 let stopping = false;
 function start() {
   child = spawn(process.execPath, ['server.js'], {
-    cwd, stdio: 'inherit', env: { ...process.env, NODE_ENV: 'development', DEV_RELOAD: '1' },
+    cwd, stdio: 'inherit', env: { ...process.env, APP_ENV: 'dev', NODE_ENV: 'development', DEV_RELOAD: '1' },
   });
   child.on('error', error => console.error(error.message));
   child.on('exit', code => {
@@ -28,10 +28,10 @@ async function restart() {
   if (pending) { pending = false; schedule(); }
 }
 function schedule() { clearTimeout(timer); timer = setTimeout(restart, 150); }
-const watchers = ['backend', 'content', 'dist'].map(dir => watch(new URL(`../${dir}/`, import.meta.url), { recursive: true }, schedule));
+const watchers = ['backend', 'content', 'dist', 'config'].map(dir => watch(new URL(`../${dir}/`, import.meta.url), { recursive: true }, schedule));
 // Watch the directory so editor saves that replace server.js also keep working.
 watchers.push(watch(new URL('../', import.meta.url), (_event, filename) => {
-  if (filename?.toString() === 'server.js') schedule();
+  if (['server.js', '.env', '.env.dev'].includes(filename?.toString())) schedule();
 }));
 function stop() {
   stopping = true; clearTimeout(timer); watchers.forEach(w => w.close());

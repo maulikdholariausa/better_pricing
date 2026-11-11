@@ -58,6 +58,8 @@ chmod 600 /srv/contract-negotiations/git/known_hosts
 cat > /etc/contract-negotiations.env <<'CONFIG'
 DOMAIN='${domain}'
 GITHUB_REPOSITORY='${repository}'
+RUNTIME_PARAMETER='${runtime_parameter}'
+AWS_REGION='${aws_region}'
 CONFIG
 chmod 600 /etc/contract-negotiations.env
 echo '${deploy_script}' | base64 --decode > /usr/local/sbin/deploy-contract-negotiations

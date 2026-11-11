@@ -36,6 +36,11 @@ if [[ ! -d $release ]]; then
   mv "$temporary" "$release"
 fi
 printf 'DOMAIN=%s\nDATA_PATH=%s/data\nPERSIST_PATH=%s\nAPP_IMAGE=contract-negotiations:%s\n' "$DOMAIN" "$base" "$base" "$sha" > "$release/.env"
+# Fetch configuration through the instance role; never put AWS access keys in releases.
+if [[ -n ${RUNTIME_PARAMETER:-} ]]; then
+  runtime=$(docker run --rm --network host amazon/aws-cli:2.39.6 ssm get-parameter --region "$AWS_REGION" --name "$RUNTIME_PARAMETER" --with-decryption --query Parameter.Value --output text)
+  printf '%s' "$runtime" | jq -er 'to_entries[] | select(.key | test("^[A-Z_]+$")) | "\(.key)=\(.value | tostring)"' >> "$release/.env"
+fi
 compose "$release" config --quiet
 # Build before stopping the healthy app; failed builds leave it serving traffic.
 compose "$release" build app

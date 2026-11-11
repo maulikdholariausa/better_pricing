@@ -1,0 +1,27 @@
+{
+  "dev": {
+    "NODE_ENV": "development",
+    "PORT": "8000",
+    "DATA_DIR": "./data/dev",
+    "QUOTES_PREFIX": "quotes-dev",
+    "GURU_DEV_OTP": "1",
+    "SEO_INDEXABLE": "false",
+    "QUOTES_BUCKET": "haveaguru-quotes-dev"
+  },
+  "staging": {
+    "NODE_ENV": "production",
+    "PORT": "8001",
+    "DATA_DIR": "./data/staging",
+    "QUOTES_PREFIX": "quotes-staging",
+    "SEO_INDEXABLE": "false",
+    "QUOTES_BUCKET": "haveaguru-quotes-staging"
+  },
+  "prod": {
+    "NODE_ENV": "production",
+    "PORT": "8002",
+    "DATA_DIR": "./data/prod",
+    "QUOTES_PREFIX": "quotes-prod",
+    "SEO_INDEXABLE": "false",
+    "QUOTES_BUCKET": "haveaguru-quotes-prod"
+  }
+}

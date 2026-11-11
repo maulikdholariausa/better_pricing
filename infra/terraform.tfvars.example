@@ -5,3 +5,11 @@ instance_type = "t3.small"
 # availability_zone = "us-west-2a"
 # data_volume_gb = 30
 # ami_id = "ami-..." # Optional pinned Ubuntu 24.04 amd64 AMI.
+
+# Start disabled; see docs/QUOTE-UPLOAD.md for staged DNS/certificate cutover.
+enable_cloudfront = false
+restrict_origin_to_cloudfront = false
+sms_monthly_spend_limit = 25
+
+# Optional overrides: bucket names must be globally unique.
+# quote_bucket_names = { dev = "haveaguru-quotes-dev", staging = "haveaguru-quotes-staging", prod = "haveaguru-quotes-prod" }

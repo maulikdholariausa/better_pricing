@@ -38,7 +38,7 @@ test('dev supervisor restarts after a static file save and exits cleanly', { tim
   const temp = await mkdtemp(path.join(os.tmpdir(), 'guru-dev-'));
   let child;
   try {
-    for (const dir of ['scripts','backend','content','dist']) await mkdir(path.join(temp, dir));
+    for (const dir of ['scripts','backend','content','dist','config']) await mkdir(path.join(temp, dir));
     await copyFile('scripts/dev.mjs', path.join(temp,'scripts/dev.mjs'));
     await writeFile(path.join(temp,'server.js'), 'console.log("START:"+process.pid); setInterval(()=>{},1000);');
     child = spawn(process.execPath, [path.join(temp,'scripts/dev.mjs')], { stdio: ['ignore','pipe','pipe'] });
