@@ -1,7 +1,7 @@
 // Intentionally never send form values, document names, IDs, URLs with query
 // strings, or free-form error messages to analytics.
 (() => {
-  const allowed = new Set(['upload_cta_clicked', 'quote_files_selected', 'quote_upload_started', 'quote_upload_failed', 'quote_uploaded', 'consent_recorded']);
+  const allowed = new Set(['upload_cta_clicked', 'quote_files_selected', 'quote_upload_started', 'quote_upload_failed', 'quote_uploaded', 'consent_recorded', 'worksheet_download_clicked']);
   let enabled = false;
   let measurementId = '';
   const safePath = document.querySelector('link[rel="canonical"]')?.getAttribute('href');

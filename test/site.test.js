@@ -37,7 +37,7 @@ test('public pages are rendered, linked and described; drafts stay outside the s
       for (const match of html.matchAll(/href="(\/[^"#?]*)"/g)) links.add(match[1]);
       if (page.path !== '/' && !page.children) assert.match(html, /aria-label="Breadcrumb"|id="quote-form"/);
     }
-    const known = new Set([...publicPages.map(p => p.path), '/styles.css', '/content.css', '/favicon.svg']);
+    const known = new Set([...publicPages.map(p => p.path), '/styles.css', '/content.css', '/favicon.svg', '/downloads/homeowner-quote-comparison.xlsx']);
     for (const href of links) assert.ok(known.has(href), `Broken internal link ${href}`);
     for (const page of publicPages) assert.ok(page.path === '/' || links.has(page.path), `Orphan page ${page.path}`);
     const sitemap = await (await fetch(base + '/sitemap.xml')).text();
@@ -47,6 +47,26 @@ test('public pages are rendered, linked and described; drafts stay outside the s
     assert.equal((await fetch(base + '/guides', { redirect: 'manual' })).status, 301);
     assert.equal((await fetch(base + '/index.html', { redirect: 'manual' })).status, 301);
     assert.deepEqual(await (await fetch(base + '/analytics-config')).json(), { measurementId: '' });
+    const worksheet = await fetch(base + '/downloads/homeowner-quote-comparison.xlsx');
+    assert.equal(worksheet.status, 200);
+    assert.equal(worksheet.headers.get('x-robots-tag'), 'noindex');
+    assert.match(worksheet.headers.get('content-type'), /spreadsheetml/);
+    assert.match(worksheet.headers.get('content-disposition'), /attachment; filename="?homeowner-quote-comparison.xlsx"?/);
+    const bytes = new Uint8Array(await worksheet.arrayBuffer());
+    assert.deepEqual([...bytes.slice(0,4)], [80,75,3,4]);
+    assert.equal(bytes.length, Number(worksheet.headers.get('content-length')));
+    assert.ok(!sitemap.includes('.xlsx'));
+    const guide = await (await fetch(base + '/guides/how-to-compare-contractor-quotes/')).text();
+    assert.match(guide, /worksheet_download_clicked/);
+    assert.match(guide, /\$21,800/);
+    assert.match(guide, /unknown|Unknown/);
+    assert.match(guide, /Washington L&amp;I/);
+    const directory = await (await fetch(base + '/locations/')).text();
+    assert.match(directory, /id="california"/);
+    assert.match(directory, /id="washington"/);
+    assert.match(directory, /Irvine/);
+    assert.match(directory, /Seattle/);
+    assert.ok(!directory.includes('href="/locations/california/irvine/"'));
   } finally {
     await new Promise(resolve => server.close(resolve));
     for (const [key,value] of Object.entries(previous)) value === undefined ? delete process.env[key] : process.env[key] = value;

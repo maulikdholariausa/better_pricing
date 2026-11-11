@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check backend/app.js && node --check backend/quote-routes.js && node --check backend/quote-services.js && node --check backend/quote-store.js && node --check infra/scripts/configure-notify.mjs && node --check dist/app.js && node --check scripts/remote.mjs && bash -n infra/scripts/deploy-app.sh && node --check backend/site.js && node --check content/pages.js && node --check dist/analytics.js && node --check backend/dev.js && node --check scripts/dev.mjs && node --check backend/environment.js && node --check backend/upload-quote.js",
+    "check": "node --check server.js && node --check backend/app.js && node --check backend/quote-routes.js && node --check backend/quote-services.js && node --check backend/quote-store.js && node --check infra/scripts/configure-notify.mjs && node --check dist/app.js && node --check scripts/remote.mjs && bash -n infra/scripts/deploy-app.sh && node --check backend/site.js && node --check content/pages.js && node --check dist/analytics.js && node --check backend/dev.js && node --check scripts/dev.mjs && node --check backend/environment.js && node --check backend/upload-quote.js && node --check content/comparison.js && node --check content/areas.js && node --check backend/content-blocks.js && node --check dist/locations.js",
     "test": "node --test",
     "deploy": "node scripts/remote.mjs deploy",
     "server:key": "node scripts/remote.mjs key",
