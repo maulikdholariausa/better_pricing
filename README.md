@@ -29,7 +29,7 @@ For local staging or prod, configure `NOTIFY_CONFIGURATION_ID` and `NOTIFY_CODE_
 
 The Node app server-renders the sitemap's content pages from `content/pages.js`. See [SEO and measurement plan](docs/SEO-PLAN.md) for the complete link structure, page inventory, crawler settings, editorial gates and analytics funnel. `dist/` alone is not the full site.
 
-Local indexing defaults off. Production Compose derives SITE_URL from DOMAIN and defaults SEO_INDEXABLE to true; explicitly set SEO_INDEXABLE=false for staging. Draft legal/contact and unconfirmed location pages remain noindex. Optional GA4 uses `GA_MEASUREMENT_ID` and a visitor opt-in; no external analytics is active by default. `npm start` loads `.env` and `.env.dev` automatically.
+Local indexing defaults off. Production Compose derives SITE_URL from DOMAIN and defaults SEO_INDEXABLE to true; explicitly set SEO_INDEXABLE=false for staging. Draft legal/contact and unconfirmed location pages remain noindex. Google Tag Manager uses container `GTM-5V25KW4H` and loads after the visitor allows optional analytics. Override `GTM_CONTAINER_ID` to change it or set it empty to disable GTM. GTM takes priority over the direct `GA_MEASUREMENT_ID` integration to avoid loading both tracking setups; publish your desired tags in the GTM container. `npm start` loads `.env` and `.env.dev` automatically.
 
 ## Infrastructure vs application deployment
 

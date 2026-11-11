@@ -4,13 +4,17 @@
   const allowed = new Set(['upload_cta_clicked', 'quote_files_selected', 'quote_upload_started', 'quote_upload_failed', 'quote_uploaded', 'consent_recorded', 'worksheet_download_clicked']);
   let enabled = false;
   let measurementId = '';
+  let tagManagerId = '';
   const safePath = document.querySelector('link[rel="canonical"]')?.getAttribute('href');
   const pagePath = safePath ? new URL(safePath).pathname : '/';
   window.trackSiteEvent = name => {
     if (!allowed.has(name)) return;
     const detail = { event: name, page_path: pagePath };
     window.dispatchEvent(new CustomEvent('site:analytics', { detail }));
-    if (enabled) window.gtag('event', name, { page_path: pagePath });
+    if (enabled) {
+      if (tagManagerId) window.dataLayer.push(detail);
+      else window.gtag('event', name, { page_path: pagePath });
+    }
   };
   document.addEventListener('click', event => {
     const anchor = event.target.closest?.('[data-track]');
@@ -21,11 +25,19 @@
     catch { return null; }
   };
   const enable = () => {
-    if (enabled || !measurementId) return;
+    if (enabled || (!measurementId && !tagManagerId)) return;
     enabled = true;
     window.dataLayer = window.dataLayer || [];
     window.gtag = function () { window.dataLayer.push(arguments); };
     window.gtag('js', new Date());
+    if (tagManagerId) {
+      window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js', page_path: pagePath, page_location: new URL(pagePath, location.origin).href, page_referrer: '' });
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtm.js?id=${tagManagerId}`;
+      document.head.append(script);
+      return;
+    }
     // Manual page view avoids query strings, fragments, and referrer PII.
     window.gtag('config', measurementId, { send_page_view: false, page_location: new URL(pagePath, location.origin).href, page_referrer: '' });
     window.gtag('event', 'page_view', { page_location: new URL(pagePath, location.origin).href, page_referrer: '', page_title: document.title });
@@ -35,7 +47,8 @@
   };
   fetch('/analytics-config').then(r => r.json()).then(config => {
     measurementId = config.measurementId;
-    if (!measurementId) return;
+    tagManagerId = config.tagManagerId;
+    if (!measurementId && !tagManagerId) return;
     const controls = document.createElement('div');
     controls.className = 'analytics-controls';
     const message = document.createElement('span');

@@ -46,7 +46,7 @@ test('public pages are rendered, linked and described; drafts stay outside the s
     assert.equal((await fetch(base + '/not-a-real-page/')).status, 404);
     assert.equal((await fetch(base + '/guides', { redirect: 'manual' })).status, 301);
     assert.equal((await fetch(base + '/index.html', { redirect: 'manual' })).status, 301);
-    assert.deepEqual(await (await fetch(base + '/analytics-config')).json(), { measurementId: '' });
+    assert.deepEqual(await (await fetch(base + '/analytics-config')).json(), { measurementId: '', tagManagerId: 'GTM-5V25KW4H' });
     const worksheet = await fetch(base + '/downloads/homeowner-quote-comparison.xlsx');
     assert.equal(worksheet.status, 200);
     assert.equal(worksheet.headers.get('x-robots-tag'), 'noindex');
