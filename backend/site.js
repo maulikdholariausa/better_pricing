@@ -1,4 +1,8 @@
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { areaPage } from '../content/areas.js';
+import { workbookPath } from '../content/comparison.js';
+import { sectionExtra, directoryContent } from './content-blocks.js';
 import { pages, services, guides, costs, locations, sources, updated } from '../content/pages.js';
 
 const brand = 'Have a Guru';
@@ -13,7 +17,7 @@ export const hubs = [
   { path: '/services/', title: 'Compare Quotes by Home Improvement Project', description: 'Find trade-specific scope checklists for flooring, painting, roofing, kitchens, bathrooms and whole-project renovations.', children: services },
   { path: '/guides/', title: 'Make Sense of Your Contractor Quote', description: 'Practical answers to your questions about estimates, competing bids, negotiation and hiring.', children: guides },
   { path: '/costs/', title: 'Understand What Drives Your Project Cost', description: 'Explore the assumptions behind flooring, painting, roofing and bathroom estimates. No invented market averages.', children: costs },
-  { path: '/locations/', title: 'Local Contractor Quote Resources', description: 'Official licensing resources and local questions to ask before hiring.', children: locations, noindex: true },
+  areaPage,
 ];
 export const uploadPage = { path: '/upload-quote/', title: 'Upload Your Contractor Quote for Free', description: 'Submit up to five PDF, JPG or PNG contractor estimates with your phone number and explicit consent for review and potential contractor contact.' };
 export const homePage = { path: '/', title: 'Compare Contractor Quotes & Explore Better Offers', description: 'Already have a contractor quote? Understand your estimate, compare equivalent work and submit your quote to Have a Guru.' };
@@ -42,13 +46,14 @@ function breadcrumbs(page) {
   return crumbs;
 }
 function head(page, config) {
+  const modified = page.updated || updated;
   const canonical = config.origin + page.path;
   const indexable = config.live && !page.noindex;
   const crumbs = breadcrumbs(page);
   const graph = [
     { '@type': 'Organization', '@id': config.origin + '/#organization', name: brand, url: config.origin + '/' },
     { '@type': 'WebSite', '@id': config.origin + '/#website', name: brand, url: config.origin + '/' },
-    { '@type': ['guide', 'cost'].includes(page.type) ? 'Article' : 'WebPage', '@id': canonical + '#page', url: canonical, name: page.title, headline: page.title, description: page.description, inLanguage: 'en-US', isPartOf: { '@id': config.origin + '/#website' }, ...(['guide', 'cost'].includes(page.type) ? { dateModified: updated, author: { '@type': 'Organization', name: brand, url: config.origin + '/about/' }, publisher: { '@id': config.origin + '/#organization' }, mainEntityOfPage: canonical } : {}) },
+    { '@type': ['guide', 'cost'].includes(page.type) ? 'Article' : 'WebPage', '@id': canonical + '#page', url: canonical, name: page.title, headline: page.title, description: page.description, inLanguage: 'en-US', isPartOf: { '@id': config.origin + '/#website' }, ...(['guide', 'cost'].includes(page.type) ? { dateModified: modified, author: { '@type': 'Organization', name: brand, url: config.origin + '/about/' }, publisher: { '@id': config.origin + '/#organization' }, mainEntityOfPage: canonical } : {}) },
     ...(page.path === '/' ? [] : [{ '@type': 'BreadcrumbList', itemListElement: crumbs.map((c,i) => ({ '@type': 'ListItem', position: i+1, name: c.name, item: config.origin + c.path })) }]),
   ];
   return `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(page.title)} | ${brand}</title><meta name="description" content="${escape(page.description)}"><meta name="robots" content="${indexable ? 'index,follow,max-image-preview:large' : 'noindex,follow'}"><link rel="canonical" href="${escape(canonical)}"><meta property="og:type" content="${['guide','cost'].includes(page.type) ? 'article' : 'website'}"><meta property="og:site_name" content="${brand}"><meta property="og:title" content="${escape(page.title)}"><meta property="og:description" content="${escape(page.description)}"><meta property="og:url" content="${escape(canonical)}"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="${escape(page.title)}"><meta name="twitter:description" content="${escape(page.description)}"><meta name="theme-color" content="#294d3d"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/content.css"><script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replaceAll('<', '\\u003c')}</script><script defer src="/analytics.js"></script>`;
@@ -70,13 +75,14 @@ export function sectionAnchors(sections, stripNumbers = true) {
 }
 
 function contentPage(page, config) {
+  const modified = page.updated || updated;
   const crumbs = breadcrumbs(page).map((c,i,a) => i === a.length - 1 ? `<span aria-current="page">${escape(c.name)}</span>` : link(c.path,c.name)).join('<span aria-hidden="true">/</span>');
   const children = page.children;
   const sections = page.sections || [];
   const anchors = sectionAnchors(sections);
   const previousAnchors = sectionAnchors(sections, false);
   const related = [...new Set([...(page.related || []), '/guides/how-to-compare-contractor-quotes/', '/guides/what-should-a-contractor-quote-include/'])].filter(p => p !== page.path).map(p => publicPages.find(x => x.path === p)).filter(Boolean).slice(0,3);
-  return shell(page, `<main id="main-content" class="content-main"><nav class="breadcrumbs" aria-label="Breadcrumb">${crumbs}</nav><section class="page-hero"><p class="eyebrow">${children ? 'The resource collection' : page.type === 'service' ? 'Compare the details' : 'A more informed decision'}</p><h1>${escape(page.title)}</h1><p class="page-deck">${escape(page.description)}</p>${page.type ? `<p class="byline">By ${link('/about/', brand)} · Updated <time datetime="${updated}">${new Date(updated + "T12:00:00Z").toLocaleDateString("en-US", {month:"long",day:"numeric",year:"numeric",timeZone:"UTC"})}</time></p>` : ''}</section>${children ? `<section class="resource-grid" aria-label="Browse resources">${children.map(card).join('')}</section>` : `<div class="article-layout"><aside class="on-this-page"><strong>On this page</strong>${sections.map(([t],i) => link(`#${anchors[i]}`,t)).join('')}<a href="/upload-quote/" data-track="upload_cta_clicked">Upload your quote →</a></aside><article>${sections.map(([title,text],i) => `<section id="${anchors[i]}" class="article-section${i === 0 ? ' quick-answer' : ''}"><span id="section-${i+1}" aria-hidden="true"></span>${previousAnchors[i] !== anchors[i] && !anchors.includes(previousAnchors[i]) ? `<span id="${previousAnchors[i]}" aria-hidden="true"></span>` : ''}<h2>${escape(title)}</h2><p>${escape(text)}</p></section>`).join('')}${page.type === 'service' ? `<section class="article-section"><h2>A simple comparison worksheet</h2><p>Use a row for each item below. This is a worksheet, not a price estimate.</p><div class="table-scroll"><table><caption>Questions to resolve with each bidder</caption><thead><tr><th scope="col">Item</th><th scope="col">What to record</th></tr></thead><tbody><tr><th scope="row">Work and quantities</th><td>Measured area, tasks and preparation</td></tr><tr><th scope="row">Products</th><td>Named specifications and approved substitutions</td></tr><tr><th scope="row">Unknowns</th><td>Allowances, exclusions and change approval</td></tr><tr><th scope="row">Handover</th><td>Schedule, cleanup, warranty and responsibilities</td></tr></tbody></table></div><p>Before sending documents, read ${link('/guides/can-i-share-a-contractor-quote/', 'what to check before sharing a quote')}.</p></section>` : ''}${page.type || page.path.startsWith('/locations/') ? `<section class="sources"><h2>Further reading</h2><p>General comparison and hiring guidance: ${sources.map(([title,url]) => link(url,title)).join(' · ')}. Trade checklists are editorial questions to discuss with your contractor, not construction specifications.</p></section>` : ''}</article></div>`}${page.noindex ? '' : cta}<section class="related"><h2>Keep exploring</h2><div class="resource-grid">${related.map(card).join('')}</div></section></main>`, config);
+  return shell(page, `<main id="main-content" class="content-main"><nav class="breadcrumbs" aria-label="Breadcrumb">${crumbs}</nav><section class="page-hero"><p class="eyebrow">${children ? 'The resource collection' : page.type === 'service' ? 'Compare the details' : 'A more informed decision'}</p><h1>${escape(page.title)}</h1><p class="page-deck">${escape(page.description)}</p>${page.type ? `<p class="byline">By ${link('/about/', brand)} · Updated <time datetime="${modified}">${new Date(modified + "T12:00:00Z").toLocaleDateString("en-US", {month:"long",day:"numeric",year:"numeric",timeZone:"UTC"})}</time></p>` : ''}</section>${page.directory ? directoryContent() : children ? `<section class="resource-grid" aria-label="Browse resources">${children.map(card).join('')}</section>` : `<div class="article-layout"><aside class="on-this-page"><strong>On this page</strong>${sections.map(([t],i) => link(`#${anchors[i]}`,t)).join('')}<a href="/upload-quote/" data-track="upload_cta_clicked">Upload your quote →</a></aside><article>${sections.map(([title,text,extra],i) => `<section id="${anchors[i]}" class="article-section${i === 0 ? ' quick-answer' : ''}"><span id="section-${i+1}" aria-hidden="true"></span>${previousAnchors[i] !== anchors[i] && !anchors.includes(previousAnchors[i]) ? `<span id="${previousAnchors[i]}" aria-hidden="true"></span>` : ''}<h2>${escape(title)}</h2><p>${escape(text)}</p>${sectionExtra(extra)}</section>`).join('')}${page.type === 'service' ? `<section class="article-section"><h2>A simple comparison worksheet</h2><p>Use a row for each item below. This is a worksheet, not a price estimate.</p><div class="table-scroll"><table><caption>Questions to resolve with each bidder</caption><thead><tr><th scope="col">Item</th><th scope="col">What to record</th></tr></thead><tbody><tr><th scope="row">Work and quantities</th><td>Measured area, tasks and preparation</td></tr><tr><th scope="row">Products</th><td>Named specifications and approved substitutions</td></tr><tr><th scope="row">Unknowns</th><td>Allowances, exclusions and change approval</td></tr><tr><th scope="row">Handover</th><td>Schedule, cleanup, warranty and responsibilities</td></tr></tbody></table></div><p>Before sending documents, read ${link('/guides/can-i-share-a-contractor-quote/', 'what to check before sharing a quote')}.</p></section>` : ''}${page.type || page.path.startsWith('/locations/') ? `<section class="sources"><h2>Further reading</h2><p>General comparison and hiring guidance: ${(page.sources || sources).map(([title,url]) => link(url,title)).join(' · ')}. Trade checklists are editorial questions to discuss with your contractor, not construction specifications.</p></section>` : ''}</article></div>`}${page.noindex ? '' : cta}<section class="related"><h2>Keep exploring</h2><div class="resource-grid">${related.map(card).join('')}</div></section></main>`, config);
 }
 
 export async function installSite(app) {
@@ -91,6 +97,11 @@ export async function installSite(app) {
   app.get('/analytics-config', (_req,res) => {
     const id = /^G-[A-Z0-9]+$/.test(process.env.GA_MEASUREMENT_ID || '') ? process.env.GA_MEASUREMENT_ID : '';
     res.set('Cache-Control', 'no-store').json({ measurementId: id });
+  });
+  app.use('/downloads', (_req,res,next) => { res.set('X-Robots-Tag', 'noindex'); next(); });
+  app.get(workbookPath, (_req,res) => {
+    res.set({ 'X-Robots-Tag': 'noindex', 'Cache-Control': 'public, max-age=3600' });
+    res.download(fileURLToPath(new URL('../dist/downloads/homeowner-quote-comparison.xlsx', import.meta.url)), 'homeowner-quote-comparison.xlsx');
   });
   app.get('/index.html', (_req,res) => res.redirect(301, '/'));
   for (const page of publicPages) {

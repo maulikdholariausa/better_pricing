@@ -1,5 +1,6 @@
 // Editorial source of truth. Prices are deliberately not represented as market averages.
 import { legalPages } from './legal.js';
+import { comparisonGuide, additionalGuides, tradeExamples } from './comparison.js';
 export const updated = '2026-11-08';
 export const sources = [
   ['FTC: Hiring a contractor and comparing written estimates', 'https://consumer.ftc.gov/articles/how-avoid-home-improvement-scam'],
@@ -145,4 +146,26 @@ export const locations = [
   { path: '/locations/california/', title: 'California Contractor Quote Resources', description: 'Find official California licensing resources and learn what to verify when comparing contractor estimates.', noindex: true, sections: [['Start with official records', 'California homeowners can use CSLB resources to check contractor identity, current license status and relevant classifications. A printed number on a quote is a starting point, not verification.'], ['Check project-specific requirements', 'Confirm permit requirements with the authority responsible for your property. Requirements depend on project details and location; this page does not determine whether your work requires a permit.'], ['Plan your conversations', 'Ask contractors about their service area, availability and experience with projects like yours. Keep a written record of the scope and timing discussed.']], related: ['/locations/california/orange-county/', '/guides/how-to-check-contractor-license/'] },
   { path: '/locations/california/orange-county/', title: 'Comparing Contractor Quotes in Orange County', description: 'Use California licensing resources and local project questions when comparing Orange County contractor estimates.', noindex: true, sections: [['Compare local project requirements', 'Give each bidder the same property constraints, access requirements, finish selections and intended schedule. Ask who checks permit requirements with the city or county responsible for your address.'], ['Verify the contracting entity', 'Use the official CSLB lookup and match the business identity and relevant classification with your proposal. Ask for current insurance documentation and references for comparable work.'], ['Flooring and painting questions', 'For flooring, clarify moisture assessment, leveling and removal. For painting, specify surface repairs, coating products and protection. Local location alone does not make two proposals comparable.'], ['Discuss scheduling', 'Ask each contractor about their service area, site visit availability and proposed start date. Include access requirements and scheduling constraints when describing your project.']], related: ['/services/flooring-quote-comparison/', '/services/painting-quote-comparison/'] },
 ];
+guides.splice(guides.findIndex(page => page.path === comparisonGuide.path), 1, comparisonGuide);
+guides.push(...additionalGuides);
+for (const service of services) {
+  service.sections.push(tradeExamples[service.slug]);
+  service.updated = '2026-11-11';
+  service.related = [comparisonGuide.path, '/guides/contractor-quote-allowances-and-exclusions/', '/guides/contractor-payment-schedule/'];
+}
+const additions = {
+  '/guides/is-my-contractor-quote-too-high/': ['Put the difference into a worksheet', 'Illustrative comparison: a higher proposal may include disposal and preparation that another bidder excludes. Record the same required work for both and leave missing prices open. A higher original total can become the lower complete-scope planning amount, but that does not settle qualifications or contract quality.'],
+  '/guides/why-contractor-quotes-vary/': ['Check allowance treatment before comparing', 'An included allowance is already part of the base quote. If your selection exceeds it, record only the documented difference. If one bidder excludes the same work entirely, record its full same-scope planning budget separately. The comparison worksheet helps expose those different assumptions.'],
+  '/guides/what-should-a-contractor-quote-include/': ['Turn the checklist into open questions', 'Record the quoted version, shared scope, material specification, included allowances, exclusions, schedule and payment triggers. For each bidder, mark what is unclear and ask for a dated written answer. The comparison worksheet provides places for the evidence and cost treatment; it does not turn an incomplete quote into a complete contract.'],
+  '/guides/questions-to-ask-before-hiring-a-contractor/': ['Keep the evidence beside the price', 'Ask for the exact entity, relevant credential record, current insurance evidence, schedule assumptions and written change process. Keep each source and checked date beside that bidder in your comparison. A license lookup alone does not confirm insurance, workmanship or an available crew.'],
+  '/guides/how-to-check-contractor-license/': ['Washington registration and trade credentials', 'Use Washington L&I’s Verify tool for current contractor registration and relevant records. Registration is not a general construction competency certificate; certain trades require additional credentials. Match the entity and work, record the date and keep insurance and workers’ compensation checks separate.'],
+};
+for (const page of [...guides, ...costs]) {
+  if (additions[page.path]) { page.sections.push(additions[page.path]); page.updated = '2026-11-11'; }
+  if (page.type === 'cost') {
+    page.sections.push(['Compare a complete scope before comparing the cost', 'Use the same product, quantity, preparation and tax assumptions for every bidder. Record required excluded work and allowance shortfalls without adding included amounts twice. If a necessary cost is unresolved, keep the adjusted total incomplete rather than displaying a misleading saving.']);
+    page.updated = '2026-11-11';
+  }
+  if (page.path !== comparisonGuide.path) page.related = [...new Set([comparisonGuide.path, ...(page.related || [])])];
+}
 export const pages = [...core.filter(page => !legalPages.some(legal => legal.path === page.path)), ...legalPages, ...services, ...guides, ...costs, ...locations];
